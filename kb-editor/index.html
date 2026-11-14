@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+  <title>KB EDITOR — Photoshop-Compatible Image Editor in Your Browser (PSD)</title>
+  <meta name="description" content="KB EDITOR is a free, Photoshop-compatible image editor that runs entirely in your browser. Open, edit and save real PSD/PSB files — layers, masks, 25+ blend modes, adjustments, filters, curves — on desktop, tablet and phone. Files never leave your device.">
+  <meta name="theme-color" content="#1b1b1c">
+  <meta name="color-scheme" content="dark">
+  <meta property="og:title" content="KB EDITOR — Real PSD editing in the browser">
+  <meta property="og:description" content="Free Photopea-class editor: open and save real Photoshop PSD files with layers and masks, right in your browser. Mobile friendly. Private by design.">
+  <meta property="og:type" content="website">
+  <meta property="og:image" content="favicon.svg">
+  <link rel="icon" type="image/svg+xml" href="favicon.svg">
+  <link rel="apple-touch-icon" href="favicon.svg">
+  <link rel="modulepreload" href="js/vendor/ag-psd.bundle.mjs">
+  <link rel="stylesheet" href="css/style.css">
+  <style>html, body { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #1b1b1c; }</style>
+  <script>
+    // Boot watchdog: if the module graph fails before js/app.js runs, the loading
+    // screen would hang forever. Turn that into a visible, actionable error.
+    (function () {
+      var showFatal = function (msg) {
+        var fatal = document.getElementById('fatal');
+        if (!fatal) return;
+        var d = document.getElementById('fatalDetail');
+        if (d && msg) d.textContent = String(msg).slice(0, 300);
+        fatal.hidden = false;
+      };
+      window.__KB_FATAL__ = showFatal;
+      window.addEventListener('error', function (e) {
+        var msg = (e && e.error && e.error.message) || (e && e.message);
+        if (msg) showFatal(msg);
+      }, true);
+      window.addEventListener('unhandledrejection', function (e) {
+        var r = e && e.reason;
+        showFatal((r && r.message) || r || 'Unexpected error');
+      });
+      window.__KB_BOOT_TIMER__ = setTimeout(function () {
+        if (!window.__KB_BOOTED__) {
+          showFatal('KB EDITOR did not finish starting. This is usually a stale cached file — reload with Ctrl+F5 (Windows/Linux) or Cmd+Shift+R (Mac). If it keeps happening, check the browser console for the exact module that failed.');
+        }
+      }, 8000);
+    })();
+  </script>
+</head>
+<body>
+
+  <!-- ══════════ TOP BAR ══════════ -->
+  <header id="topbar">
+    <a id="brand" href="./" aria-label="KB EDITOR — home">
+      <svg id="brandMark" viewBox="0 0 72 72" width="30" height="30" aria-hidden="true">
+        <rect width="72" height="72" rx="16" fill="url(#kbBrandGrad)"/>
+        <g stroke="#fff" stroke-width="4.6" stroke-linecap="round" stroke-linejoin="round" fill="none">
+          <path d="M22.5 20v32"/>
+          <path d="M41.5 22.5 29 36l12.5 13.5"/>
+          <path d="M49 22.5v.01M55 36h.01M49 49.5v.01" stroke-width="5.6"/>
+        </g>
+        <defs><linearGradient id="kbBrandGrad" x1="0" y1="0" x2="72" y2="72"><stop stop-color="#2f8cff"/><stop offset="1" stop-color="#0bc5ea"/></linearGradient></defs>
+      </svg>
+      <span class="wordmark">KB<strong>EDITOR</strong></span>
+    </a>
+    <nav id="menuHost" aria-label="Application menus"></nav>
+    <div id="docTitleWrap" aria-hidden="true"><span id="docTitle">untitled-1</span></div>
+    <div id="topActions">
+      <button id="btnOpen" class="top-btn" title="Open image or PSD (Ctrl/⌘+O)" aria-label="Open file">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2.5h8a2 2 0 0 1 2 2V17a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7z"/></svg>
+      </button>
+      <button id="btnExport" class="top-btn" title="Export PNG" aria-label="Export PNG">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="M7.5 10.5L12 15l4.5-4.5"/><path d="M4 17.5v2A1.5 1.5 0 0 0 5.5 21h13a1.5 1.5 0 0 0 1.5-1.5v-2"/></svg>
+      </button>
+      <button id="btnSave" class="top-btn top-btn-primary" title="Save as Photoshop PSD (Ctrl/⌘+S)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3h11l4 4v13a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 20V4.5A1.5 1.5 0 0 1 5.5 3z"/><path d="M8 3v5h7V3"/><rect x="8" y="13" width="8" height="6.5"/></svg>
+        <span>Save .PSD</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- ══════════ OPTIONS BAR ══════════ -->
+  <div id="optionsBar" role="toolbar" aria-label="Tool options"></div>
+
+  <!-- ══════════ WORKSPACE ══════════ -->
+  <main id="workspace">
+    <aside id="toolRail" aria-label="Tools">
+      <div id="toolButtons"></div>
+      <div id="swatches" title="Foreground / Background colors">
+        <div class="swatch-stack">
+          <button id="bgSwatch" class="swatch swatch-bg" aria-label="Background color"></button>
+          <button id="fgSwatch" class="swatch swatch-fg" aria-label="Foreground color"></button>
+          <button id="swapColors" class="swatch-mini swatch-swap" title="Swap colors (X)" aria-label="Swap colors">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 4L3.5 7.5 7 11"/><path d="M3.5 7.5H17"/><path d="M17 12l3.5 3.5L17 19"/><path d="M20.5 15.5H7"/></svg>
+          </button>
+          <button id="resetColors" class="swatch-mini swatch-reset" title="Reset colors (D)" aria-label="Reset colors">
+            <svg viewBox="0 0 24 24"><rect x="4.5" y="4.5" width="11" height="11" fill="#141414" stroke="#9a9a9a" stroke-width="1.2"/><rect x="8.5" y="8.5" width="11" height="11" fill="#f2f2f2" stroke="#9a9a9a" stroke-width="1.2"/></svg>
+          </button>
+        </div>
+      </div>
+    </aside>
+
+    <section id="canvasArea" aria-label="Canvas">
+      <canvas id="rulerCorner" aria-hidden="true"></canvas>
+      <canvas id="rulerTop" aria-hidden="true"></canvas>
+      <canvas id="rulerLeft" aria-hidden="true"></canvas>
+      <canvas id="view"></canvas>
+      <div id="brushCursor" aria-hidden="true"></div>
+    </section>
+
+    <!-- Right dock: Layers + History -->
+    <aside id="dock" aria-label="Layers and history panels">
+      <div id="dockTabs" role="tablist">
+        <button class="dock-tab active" data-tab="layers" role="tab" aria-selected="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l9 5-9 5-9-5 9-5z"/><path d="M3 12.5l9 5 9-5"/><path d="M3 17l9 5 9-5"/></svg>
+          Layers
+        </button>
+        <button class="dock-tab" data-tab="history" role="tab" aria-selected="false">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 12a8.5 8.5 0 1 1 2.5 6"/><path d="M3.5 12H7M3.5 12V8.5"/><path d="M12 8v4.5l3 1.8"/></svg>
+          History
+        </button>
+        <button id="dockClose" aria-label="Hide panels">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+        </button>
+      </div>
+
+      <div id="dockLayers" class="dock-page active" role="tabpanel">
+        <div id="layerControls">
+          <select id="blendSelect" class="opt-select" aria-label="Layer blend mode"></select>
+          <div class="opacity-wrap" title="Layer opacity">
+            <label for="opacityRange">Opacity</label>
+            <input id="opacityRange" type="range" min="0" max="100" value="100">
+            <span id="opacityValue">100%</span>
+          </div>
+        </div>
+        <div id="layerList" aria-label="Layers list"></div>
+        <div id="layerActions">
+          <button id="btnMoveDown" class="layer-action" title="Send backward" aria-label="Send backward"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 10l6 6 6-6"/></svg></button>
+          <button id="btnMoveUp" class="layer-action" title="Bring forward" aria-label="Bring forward"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 14l6-6 6 6"/></svg></button>
+          <button id="btnAddMask" class="layer-action" title="Add layer mask" aria-label="Add layer mask"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="5.5" width="17" height="13" rx="6.5"/></svg></button>
+          <button id="btnDuplicateLayer" class="layer-action" title="Duplicate layer" aria-label="Duplicate layer"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="8.5" y="8.5" width="12" height="12" rx="1.5"/><path d="M15.5 5.5v-1a2 2 0 0 0-2-2h-9a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h1"/></svg></button>
+          <button id="btnNewLayer" class="layer-action" title="New layer (Ctrl/⌘+Shift+N)" aria-label="New layer"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></button>
+          <button id="btnDeleteLayer" class="layer-action layer-action-danger" title="Delete layer" aria-label="Delete layer"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16"/><path d="M9.5 7V4.8a1.3 1.3 0 0 1 1.3-1.3h2.4a1.3 1.3 0 0 1 1.3 1.3V7"/><path d="M6.5 7l1 13a2 2 0 0 0 2 1.9h5a2 2 0 0 0 2-1.9l1-13"/></svg></button>
+        </div>
+      </div>
+
+      <div id="dockHistory" class="dock-page" role="tabpanel">
+        <div class="history-note">Every step is undoable. Click a step to revert to before it.</div>
+        <div id="historyList" aria-label="History"></div>
+      </div>
+    </aside>
+
+    <!-- Mobile: floating button to open the Layers/History dock -->
+    <button id="dockFab" type="button" aria-label="Toggle Layers and History panel" title="Layers / History">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l9 5-9 5-9-5 9-5z"/><path d="M3 13l9 5 9-5"/><path d="M3 17.5l9 5 9-5"/></svg>
+    </button>
+  </main>
+
+  <!-- ══════════ STATUS BAR ══════════ -->
+  <footer id="statusbar">
+    <div class="status-group">
+      <button id="zoomOut" class="status-btn" aria-label="Zoom out">−</button>
+      <span id="zoomLabel" title="Zoom level">100%</span>
+      <button id="zoomIn" class="status-btn" aria-label="Zoom in">+</button>
+      <button id="zoomFit" class="status-btn status-btn-wide">Fit</button>
+      <button id="zoom100" class="status-btn status-btn-wide">100%</button>
+    </div>
+    <div id="hint" class="status-center"></div>
+    <div id="docStats" class="status-right"></div>
+  </footer>
+
+  <input type="color" id="fgPicker" hidden aria-hidden="true">
+  <input type="color" id="bgPicker" hidden aria-hidden="true">
+  <input type="file" id="fileInput" accept=".psd,.psb,.png,.jpg,.jpeg,.webp,.gif,.bmp,.avif,.tif,.tiff,image/*" multiple hidden>
+
+  <div id="toast" role="status" aria-live="polite"></div>
+  <div id="dialogRoot"></div>
+
+  <!-- Fatal error overlay: visible even when the module graph dies -->
+  <div id="fatal" hidden role="alert">
+    <div class="fatal-box">
+      <p><strong>KB EDITOR stopped unexpectedly.</strong></p>
+      <p>Unsaved changes in this tab may be lost. Reload to start again.</p>
+      <p id="fatalDetail" class="fatal-detail"></p>
+      <button id="fatalReload" class="dialog-btn dialog-ok">Reload KB EDITOR</button>
+    </div>
+  </div>
+
+  <!-- Loading screen -->
+  <div id="loading" aria-hidden="true">
+    <div class="loading-inner">
+      <svg viewBox="0 0 72 72" width="88" height="88" aria-hidden="true">
+        <rect width="72" height="72" rx="16" fill="url(#kbLoadGrad)"/>
+        <g stroke="#fff" stroke-width="4.6" stroke-linecap="round" stroke-linejoin="round" fill="none">
+          <path d="M22.5 20v32"/>
+          <path d="M41.5 22.5 29 36l12.5 13.5"/>
+          <path d="M49 22.5v.01M55 36h.01M49 49.5v.01" stroke-width="5.6"/>
+        </g>
+        <defs><linearGradient id="kbLoadGrad" x1="0" y1="0" x2="72" y2="72"><stop stop-color="#2f8cff"/><stop offset="1" stop-color="#0bc5ea"/></linearGradient></defs>
+      </svg>
+      <h1 class="loading-name">KB<strong>EDITOR</strong></h1>
+      <div class="loading-bar"><div class="loading-bar-fill"></div></div>
+      <p class="loading-tip">Loading the PSD engine…</p>
+      <p class="loading-sub">Photoshop-compatible · files stay on your device</p>
+    </div>
+  </div>
+
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>

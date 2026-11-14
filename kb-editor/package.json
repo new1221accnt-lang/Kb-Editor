@@ -1,0 +1,22 @@
+{
+  "name": "kb-editor",
+  "version": "1.0.0",
+  "private": true,
+  "description": "KB EDITOR — Photopea-class, Photoshop-compatible image editor with a real PSD/PSB engine, running entirely in the browser. Free, offline-capable, mobile friendly.",
+  "type": "module",
+  "scripts": {
+    "build:vendor": "esbuild js/vendor/vendor-entry.mjs --bundle --minify --format=esm --outfile=js/vendor/ag-psd.bundle.mjs --banner:js=\"/* ag-psd 34.2.0 - https://github.com/Agamnentzar/ag-psd - MIT License. Bundled for KB EDITOR. */\"",
+    "check": "esbuild js/app.js --bundle --minify --format=esm --outfile=/dev/null",
+    "test": "node test/roundtrip.test.mjs && node test/smoke.test.mjs && node test/flows.test.mjs",
+    "serve": "python3 -m http.server 8080 --directory . --bind 0.0.0.0",
+    "build:standalone": "esbuild js/app.js --bundle --minify --format=iife --outfile=/tmp/kb-app-iife.js && python3 test/build-standalone.py"
+  },
+  "devDependencies": {
+    "@napi-rs/canvas": "^1.1.1",
+    "esbuild": "^0.24.0",
+    "jsdom": "^31.0.1"
+  },
+  "dependencies": {
+    "ag-psd": "^34.2.0"
+  }
+}
